@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat Room</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; }
+    #messages { list-style-type: none; padding: 0; height: 300px; overflow-y: scroll; border: 1px solid #ccc; margin-bottom: 10px; }
+    #messages li { padding: 5px 10px; }
+    input { width: 80%; padding: 10px; }
+    button { padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Welcome to TEKA-hub-maker Chat</h1>
+  <a href="/logout">Logout</a>
+  <ul id="messages"></ul>
+  <form id="chat-form">
+    <input id="m" autocomplete="off" placeholder="Type a message"/>
+    <button>Send</button>
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('m');
+    const messages = document.getElementById('messages');
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (input.value) {
+        socket.emit('chat message', input.value);
+        input.value = '';
+      }
+    });
+
+    socket.on('chat message', function(msg) {
+      const li = document.createElement('li');
+      li.textContent = msg;
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight; // scroll to bottom
+    });
+  </script>
+</body>
+</html>

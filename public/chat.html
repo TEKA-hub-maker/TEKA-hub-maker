@@ -3,25 +3,33 @@
 <head>
   <title>Chat Room</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; }
-    #messages { list-style-type: none; padding: 0; height: 300px; overflow-y: scroll; border: 1px solid #ccc; margin-bottom: 10px; }
+    body { font-family: Arial; max-width: 600px; margin: 50px auto; }
+    #messages { list-style: none; padding: 0; height: 300px; overflow-y: scroll; border: 1px solid #ccc; margin-bottom: 10px; }
     #messages li { padding: 5px 10px; }
-    input { width: 80%; padding: 10px; }
+    input { width: 70%; padding: 10px; }
     button { padding: 10px; }
   </style>
 </head>
 <body>
-  <h1>Welcome to TEKA-hub-maker Chat</h1>
-  <a href="/logout">Logout</a>
+  <h1>Chat Room: <span id="roomName"></span></h1>
+  <a href="/rooms">Back to Rooms</a> | <a href="/logout">Logout</a>
   <ul id="messages"></ul>
   <form id="chat-form">
-    <input id="m" autocomplete="off" placeholder="Type a message"/>
+    <input id="m" autocomplete="off" placeholder="Type a message… use emojis 🙂👍" />
     <button>Send</button>
   </form>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    const username = sessionStorage.getItem('username');
+    const room = sessionStorage.getItem('room');
+    if (!username || !room) window.location.href = '/';
+
+    document.getElementById('roomName').textContent = room;
+
     const socket = io();
+    socket.emit('join room', { username, room });
+
     const form = document.getElementById('chat-form');
     const input = document.getElementById('m');
     const messages = document.getElementById('messages');
@@ -29,16 +37,16 @@
     form.addEventListener('submit', function(e) {
       e.preventDefault();
       if (input.value) {
-        socket.emit('chat message', input.value);
+        socket.emit('chat message', input.value); // emojis can be typed directly
         input.value = '';
       }
     });
 
     socket.on('chat message', function(msg) {
       const li = document.createElement('li');
-      li.textContent = msg;
+      li.textContent = `[${msg.time}] ${msg.user}: ${msg.text}`;
       messages.appendChild(li);
-      messages.scrollTop = messages.scrollHeight; // scroll to bottom
+      messages.scrollTop = messages.scrollHeight;
     });
   </script>
 </body>

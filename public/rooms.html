@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Select Chat Room</title>
+  <style>
+    body { font-family: Arial; display: flex; flex-direction: column; align-items: center; margin-top: 100px; }
+    input, button { padding: 10px; margin: 5px; width: 200px; }
+  </style>
+</head>
+<body>
+  <h1>Welcome, <span id="username"></span></h1>
+  <h2>Select or create a room</h2>
+  <form id="room-form">
+    <input type="text" id="room" placeholder="Enter room name" required>
+    <button>Create / Join Room</button>
+  </form>
+
+  <script>
+    const username = sessionStorage.getItem('username') || '';
+    if (!username) sessionStorage.setItem('username', prompt('Enter your username'));
+    document.getElementById('username').textContent = sessionStorage.getItem('username');
+
+    const form = document.getElementById('room-form');
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const room = document.getElementById('room').value.trim();
+      if (room) {
+        sessionStorage.setItem('room', room);
+        window.location.href = '/chat-room';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -19,20 +19,26 @@ app.use(session({
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Login Page
+// Routes
 app.get('/', (req, res) => {
-  if (req.session.username) {
-    res.sendFile(__dirname + '/public/chat.html'); // logged in
-  } else {
-    res.sendFile(__dirname + '/public/login.html'); // login page
-  }
+  res.sendFile(__dirname + '/public/login.html');
 });
 
 app.post('/login', (req, res) => {
   const { username } = req.body;
   if (!username) return res.redirect('/');
   req.session.username = username;
-  res.redirect('/');
+  res.redirect('/rooms');
+});
+
+app.get('/rooms', (req, res) => {
+  if (!req.session.username) return res.redirect('/');
+  res.sendFile(__dirname + '/public/rooms.html');
+});
+
+app.get('/chat-room', (req, res) => {
+  if (!req.session.username) return res.redirect('/');
+  res.sendFile(__dirname + '/public/chat.html');
 });
 
 app.get('/logout', (req, res) => {
@@ -40,19 +46,40 @@ app.get('/logout', (req, res) => {
   res.redirect('/');
 });
 
-// Socket.io Chat
+// Socket.io logic
 io.on('connection', (socket) => {
   console.log('a user connected');
 
+  socket.on('join room', ({ username, room }) => {
+    socket.join(room);
+    socket.room = room;
+    socket.username = username;
+    io.to(room).emit('chat message', {
+      user: 'System',
+      text: `${username} joined ${room}`,
+      time: new Date().toLocaleTimeString()
+    });
+  });
+
   socket.on('chat message', (msg) => {
-    io.emit('chat message', msg);
+    const timestamp = new Date().toLocaleTimeString();
+    io.to(socket.room).emit('chat message', {
+      user: socket.username,
+      text: msg,
+      time: timestamp
+    });
   });
 
   socket.on('disconnect', () => {
-    console.log('user disconnected');
+    if(socket.room && socket.username){
+      io.to(socket.room).emit('chat message', {
+        user: 'System',
+        text: `${socket.username} left ${socket.room}`,
+        time: new Date().toLocaleTimeString()
+      });
+    }
   });
 });
 
-// Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

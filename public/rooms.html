@@ -16,12 +16,15 @@
   </form>
 
   <script>
-    const username = sessionStorage.getItem('username') || '';
-    if (!username) sessionStorage.setItem('username', prompt('Enter your username'));
-    document.getElementById('username').textContent = sessionStorage.getItem('username');
+    let username = sessionStorage.getItem('username');
+    if (!username) {
+      username = prompt('Enter your username');
+      sessionStorage.setItem('username', username);
+    }
+    document.getElementById('username').textContent = username;
 
     const form = document.getElementById('room-form');
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', function(e){
       e.preventDefault();
       const room = document.getElementById('room').value.trim();
       if (room) {

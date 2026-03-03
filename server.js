@@ -3,6 +3,7 @@ const session = require('express-session');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const multer = require('multer');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,8 +17,11 @@ app.use(session({
   saveUninitialized: true
 }));
 
-// Serve static files
+// Static files
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Multer setup for image uploads
+const upload = multer({ dest: 'public/assets/' });
 
 // Routes
 app.get('/', (req, res) => {
@@ -46,39 +50,57 @@ app.get('/logout', (req, res) => {
   res.redirect('/');
 });
 
-// Socket.io logic
+// Store message history per room
+const roomHistory = {};
+
+// Socket.io
 io.on('connection', (socket) => {
-  console.log('a user connected');
+  console.log('A user connected');
 
   socket.on('join room', ({ username, room }) => {
     socket.join(room);
-    socket.room = room;
     socket.username = username;
-    io.to(room).emit('chat message', {
-      user: 'System',
-      text: `${username} joined ${room}`,
-      time: new Date().toLocaleTimeString()
-    });
+    socket.room = room;
+
+    if (!roomHistory[room]) roomHistory[room] = [];
+
+    // Send previous messages to user
+    roomHistory[room].forEach(msg => socket.emit('chat message', msg));
+
+    // Join notification
+    const joinMsg = { user: 'System', text: `${username} joined ${room}`, time: new Date().toLocaleTimeString() };
+    roomHistory[room].push(joinMsg);
+    io.to(room).emit('chat message', joinMsg);
   });
 
   socket.on('chat message', (msg) => {
-    const timestamp = new Date().toLocaleTimeString();
-    io.to(socket.room).emit('chat message', {
-      user: socket.username,
-      text: msg,
-      time: timestamp
-    });
+    const messageObj = { user: socket.username, text: msg, time: new Date().toLocaleTimeString() };
+    roomHistory[socket.room].push(messageObj);
+    io.to(socket.room).emit('chat message', messageObj);
   });
 
   socket.on('disconnect', () => {
-    if(socket.room && socket.username){
-      io.to(socket.room).emit('chat message', {
-        user: 'System',
-        text: `${socket.username} left ${socket.room}`,
-        time: new Date().toLocaleTimeString()
-      });
+    if (socket.room && socket.username) {
+      const leaveMsg = { user: 'System', text: `${socket.username} left ${socket.room}`, time: new Date().toLocaleTimeString() };
+      roomHistory[socket.room].push(leaveMsg);
+      io.to(socket.room).emit('chat message', leaveMsg);
     }
   });
+});
+
+// Image upload route
+app.post('/upload', upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).send('No file uploaded.');
+  const imagePath = `/assets/${req.file.filename}`;
+  const timestamp = new Date().toLocaleTimeString();
+
+  io.to(req.body.room).emit('chat message', {
+    user: req.body.username,
+    text: `<img src="${imagePath}" alt="image" style="max-width:150px; max-height:150px;">`,
+    time: timestamp
+  });
+
+  res.sendStatus(200);
 });
 
 const PORT = process.env.PORT || 3000;

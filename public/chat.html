@@ -4,8 +4,8 @@
   <title>Chat Room</title>
   <style>
     body { font-family: Arial; max-width: 600px; margin: 50px auto; }
-    #messages { list-style: none; padding: 0; height: 300px; overflow-y: scroll; border: 1px solid #ccc; margin-bottom: 10px; }
-    #messages li { padding: 5px 10px; }
+    #messages { list-style: none; padding: 10px; height: 400px; overflow-y: scroll; border: 1px solid #ccc; background: #f9f9f9; border-radius: 8px; }
+    #messages li { padding: 5px 10px; margin-bottom: 5px; border-radius: 5px; background: #e1f0ff; word-wrap: break-word; }
     input { width: 70%; padding: 10px; }
     button { padding: 10px; }
   </style>
@@ -13,7 +13,16 @@
 <body>
   <h1>Chat Room: <span id="roomName"></span></h1>
   <a href="/rooms">Back to Rooms</a> | <a href="/logout">Logout</a>
+
   <ul id="messages"></ul>
+
+  <!-- Image upload -->
+  <form id="image-form" enctype="multipart/form-data">
+    <input type="file" id="image" accept="image/*" />
+    <button type="submit">Upload Image</button>
+  </form>
+
+  <!-- Chat message form -->
   <form id="chat-form">
     <input id="m" autocomplete="off" placeholder="Type a message… use emojis 🙂👍" />
     <button>Send</button>
@@ -30,23 +39,40 @@
     const socket = io();
     socket.emit('join room', { username, room });
 
-    const form = document.getElementById('chat-form');
-    const input = document.getElementById('m');
     const messages = document.getElementById('messages');
+    const chatForm = document.getElementById('chat-form');
+    const input = document.getElementById('m');
 
-    form.addEventListener('submit', function(e) {
+    chatForm.addEventListener('submit', function(e){
       e.preventDefault();
       if (input.value) {
-        socket.emit('chat message', input.value); // emojis can be typed directly
+        socket.emit('chat message', input.value);
         input.value = '';
       }
     });
 
-    socket.on('chat message', function(msg) {
+    socket.on('chat message', function(msg){
       const li = document.createElement('li');
-      li.textContent = `[${msg.time}] ${msg.user}: ${msg.text}`;
+      li.innerHTML = `[${msg.time}] <b>${msg.user}:</b> ${msg.text}`;
       messages.appendChild(li);
       messages.scrollTop = messages.scrollHeight;
+    });
+
+    // Image upload
+    const imageForm = document.getElementById('image-form');
+    const imageInput = document.getElementById('image');
+
+    imageForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      if (!imageInput.files[0]) return;
+
+      const formData = new FormData();
+      formData.append('image', imageInput.files[0]);
+      formData.append('username', username);
+      formData.append('room', room);
+
+      fetch('/upload', { method: 'POST', body: formData })
+        .then(() => { imageInput.value = ''; });
     });
   </script>
 </body>
